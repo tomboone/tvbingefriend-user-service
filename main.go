@@ -1,0 +1,101 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+)
+
+func main() {
+	// Load configuration
+	config, err := LoadConfig()
+	if err != nil {
+		log.Fatal("Failed to load configuration:", err)
+	}
+
+	fmt.Println("Configuration loaded successfully!")
+	fmt.Printf("Server will run on port: %s\n", config.ServerPort)
+
+	// Initialize structured logger
+	logger := setupLogger(config)
+
+	// Connect to database
+	db, err := connectDB(config)
+	if err != nil {
+		log.Fatal("Failed to connect to database:", err)
+	}
+	defer db.Close()
+
+	logger.Info("starting user service",
+		"port", config.ServerPort,
+		"environment", config.Environment,
+		"cors_origin", config.AllowedOrigin,
+	)
+
+	// Initialize database tables
+	err = initDB(db)
+	if err != nil {
+		log.Fatal("Failed to initialize database:", err)
+	}
+
+	fmt.Println("Database connected and initialized successfully!")
+
+	// Create rate limiters
+	loginRateLimiter := NewRateLimiter(5, time.Minute)    // 5 attempts per minute
+	registerRateLimiter := NewRateLimiter(3, time.Minute) // 3 attempts per minute
+
+	// Create CORS middleware with config
+	corsMiddleware := makeCorsMiddleware(config)
+
+	// Set up HTTP routes with CORS and rate limiting on auth endpoints
+	http.HandleFunc("/register", loggingMiddleware(logger, corsMiddleware(RateLimitMiddleware(registerRateLimiter, logger)(makeRegisterHandler(config, db, logger)))))
+	http.HandleFunc("/login", loggingMiddleware(logger, corsMiddleware(RateLimitMiddleware(loginRateLimiter, logger)(makeLoginHandler(config, db, logger)))))
+	http.HandleFunc("/verify", loggingMiddleware(logger, corsMiddleware(makeVerifyHandler(config, logger))))
+	http.HandleFunc("/refresh", loggingMiddleware(logger, corsMiddleware(makeRefreshHandler(config, logger))))
+
+	// Health check endpoint (no middleware needed)
+	http.HandleFunc("/health", makeHealthHandler(db, logger))
+
+	// Create HTTP server
+	srv := &http.Server{
+		Addr: ":" + config.ServerPort,
+	}
+
+	// Channel to listen for shutdown signals
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	// Start server in a goroutine
+	go func() {
+		logger.Info("server starting", "port", config.ServerPort)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error("server failed to start", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	// Wait for shutdown signal
+	<-stop
+	logger.Info("shutdown signal received, starting graceful shutdown")
+
+	// Create shutdown context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Attempt graceful shutdown
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Error("server shutdown failed", "error", err)
+	}
+
+	// Close database connection
+	if err := db.Close(); err != nil {
+		logger.Error("failed to close database", "error", err)
+	}
+
+	logger.Info("server stopped gracefully")
+}

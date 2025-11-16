@@ -1,0 +1,38 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+README.md
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go build artifacts (if any exist locally)
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+auth-service
+
+# Test files
+*_test.go
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Env files (secrets should never be in image)
+.env
+.env.*
+*.env

@@ -1,0 +1,80 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+auth-service
+tvbingefriend-user-service
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+
+# Dependency directories
+vendor/
+
+# Environment variables and secrets
+.env
+.env.*
+*.env
+.envrc
+
+# IDE - GoLand / IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# IDE - VSCode
+.vscode/
+*.code-workspace
+
+# IDE - Vim
+*.swp
+*.swo
+*~
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Database files (if you ever have local SQLite or similar)
+*.db
+*.sqlite
+*.sqlite3
+
+# Docker volumes (if you create any)
+/data/
+/volumes/
+
+# Build artifacts
+/bin/
+/dist/
+/build/
+
+# Azure/deployment specific
+.azure/
+*.publish.xml
+
+# Test coverage
+coverage.txt
+coverage.html
