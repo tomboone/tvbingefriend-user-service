@@ -37,7 +37,8 @@ func connectDB(config *Config) (*sql.DB, error) {
 }
 
 func initDB(db *sql.DB) error {
-	query := `
+	// Create users table
+	usersTable := `
     CREATE TABLE IF NOT EXISTS users (
        id VARCHAR(36) PRIMARY KEY,
        username VARCHAR(255) UNIQUE NOT NULL,
@@ -50,6 +51,24 @@ func initDB(db *sql.DB) error {
        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`
 
-	_, err := db.Exec(query)
+	_, err := db.Exec(usersTable)
+	if err != nil {
+		return err
+	}
+
+	// Create refresh_tokens table
+	refreshTokensTable := `
+    CREATE TABLE IF NOT EXISTS refresh_tokens (
+        id VARCHAR(36) PRIMARY KEY,
+        user_id VARCHAR(36) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP NOT NULL,
+        revoked BOOLEAN DEFAULT FALSE NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_user_id (user_id),
+        INDEX idx_expires_at (expires_at)
+    )`
+
+	_, err = db.Exec(refreshTokensTable)
 	return err
 }

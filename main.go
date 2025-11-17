@@ -57,7 +57,7 @@ func main() {
 	http.HandleFunc("/register", loggingMiddleware(logger, corsMiddleware(RateLimitMiddleware(registerRateLimiter, logger)(makeRegisterHandler(config, db, logger)))))
 	http.HandleFunc("/login", loggingMiddleware(logger, corsMiddleware(RateLimitMiddleware(loginRateLimiter, logger)(makeLoginHandler(config, db, logger)))))
 	http.HandleFunc("/verify", loggingMiddleware(logger, corsMiddleware(makeVerifyHandler(config, logger))))
-	http.HandleFunc("/refresh", loggingMiddleware(logger, corsMiddleware(makeRefreshHandler(config, logger))))
+	http.HandleFunc("/refresh", loggingMiddleware(logger, corsMiddleware(makeRefreshHandler(config, db, logger))))
 
 	// Email verification endpoints
 	http.HandleFunc("/verify-email", loggingMiddleware(logger, makeVerifyEmailHandler(db, logger)))

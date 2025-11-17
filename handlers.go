@@ -133,7 +133,7 @@ func makeRegisterHandler(config *Config, db *sql.DB, logger *slog.Logger) http.H
 			return
 		}
 
-		refreshToken, err := generateRefreshToken(config, user.ID, user.Username)
+		refreshToken, err := generateRefreshToken(config, db, user.ID, user.Username)
 		if err != nil {
 			logger.Error("failed to generate refresh token",
 				"error", err,
@@ -232,7 +232,7 @@ func makeLoginHandler(config *Config, db *sql.DB, logger *slog.Logger) http.Hand
 			return
 		}
 
-		refreshToken, err := generateRefreshToken(config, user.ID, user.Username)
+		refreshToken, err := generateRefreshToken(config, db, user.ID, user.Username)
 		if err != nil {
 			logger.Error("failed to generate refresh token",
 				"error", err,
@@ -314,7 +314,7 @@ type RefreshRequest struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
-func makeRefreshHandler(config *Config, logger *slog.Logger) http.HandlerFunc {
+func makeRefreshHandler(config *Config, db *sql.DB, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -338,33 +338,89 @@ func makeRefreshHandler(config *Config, logger *slog.Logger) http.HandlerFunc {
 
 		claims, err := validateToken(config, req.RefreshToken)
 		if err != nil {
-			logger.Warn("refresh token validation failed",
-				"error", err,
-			)
+			logger.Warn("refresh token validation failed", "error", err)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusUnauthorized)
 			json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid refresh token"})
 			return
 		}
 
+		// Check if token_id exists and is not revoked
+		var revoked bool
+		var expiresAt time.Time
+		query := "SELECT revoked, expires_at FROM refresh_tokens WHERE id = ?"
+		err = db.QueryRow(query, claims.TokenID).Scan(&revoked, &expiresAt)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				logger.Warn("refresh token not found in database", "token_id", claims.TokenID)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusUnauthorized)
+				json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid refresh token"})
+				return
+			}
+			logger.Error("database error checking refresh token", "error", err, "token_id", claims.TokenID)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(ErrorResponse{Error: "Internal server error"})
+			return
+		}
+
+		// Check if token is revoked
+		if revoked {
+			logger.Warn("attempted use of revoked refresh token", "token_id", claims.TokenID, "user_id", claims.UserID)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid refresh token"})
+			return
+		}
+
+		// Check if token is expired (double-check beyond JWT validation)
+		if time.Now().After(expiresAt) {
+			logger.Warn("attempted use of expired refresh token", "token_id", claims.TokenID)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid refresh token"})
+			return
+		}
+
+		// Revoke the old token (one-time use)
+		updateQuery := "UPDATE refresh_tokens SET revoked = TRUE WHERE id = ?"
+		_, err = db.Exec(updateQuery, claims.TokenID)
+		if err != nil {
+			logger.Error("failed to revoke old refresh token", "error", err, "token_id", claims.TokenID)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(ErrorResponse{Error: "Internal server error"})
+			return
+		}
+
 		// Generate new access token
 		accessToken, err := generateAccessToken(config, claims.UserID, claims.Username)
 		if err != nil {
-			logger.Error("failed to generate new access token",
-				"error", err,
-				"user_id", claims.UserID,
-				"username", claims.Username,
-			)
+			logger.Error("failed to generate new access token", "error", err, "user_id", claims.UserID)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to generate access token"})
 			return
 		}
 
-		// Send response with new access token
+		// Generate NEW refresh token (rotation)
+		newRefreshToken, err := generateRefreshToken(config, db, claims.UserID, claims.Username)
+		if err != nil {
+			logger.Error("failed to generate new refresh token", "error", err, "user_id", claims.UserID)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to generate refresh token"})
+			return
+		}
+
+		logger.Info("tokens refreshed successfully", "user_id", claims.UserID, "old_token_id", claims.TokenID)
+
+		// Send response with BOTH new tokens
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{
-			"access_token": accessToken,
+			"access_token":  accessToken,
+			"refresh_token": newRefreshToken,
 		})
 	}
 }
