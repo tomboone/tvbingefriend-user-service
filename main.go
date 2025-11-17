@@ -46,8 +46,9 @@ func main() {
 	fmt.Println("Database connected and initialized successfully!")
 
 	// Create rate limiters
-	loginRateLimiter := NewRateLimiter(5, time.Minute)    // 5 attempts per minute
-	registerRateLimiter := NewRateLimiter(3, time.Minute) // 3 attempts per minute
+	loginRateLimiter := NewRateLimiter(5, time.Minute)         // 5 attempts per minute
+	registerRateLimiter := NewRateLimiter(3, time.Minute)      // 3 attempts per minute
+	passwordResetRateLimiter := NewRateLimiter(3, time.Minute) // 3 attempts per minute
 
 	// Create CORS middleware with config
 	corsMiddleware := makeCorsMiddleware(config)
@@ -61,6 +62,10 @@ func main() {
 	// Email verification endpoints
 	http.HandleFunc("/verify-email", loggingMiddleware(logger, makeVerifyEmailHandler(db, logger)))
 	http.HandleFunc("/resend-verification", loggingMiddleware(logger, corsMiddleware(makeResendVerificationHandler(config, db, logger))))
+
+	// Password reset endpoints
+	http.HandleFunc("/request-password-reset", loggingMiddleware(logger, corsMiddleware(RateLimitMiddleware(passwordResetRateLimiter, logger)(makeRequestPasswordResetHandler(config, db, logger, passwordResetRateLimiter)))))
+	http.HandleFunc("/reset-password", loggingMiddleware(logger, corsMiddleware(makeResetPasswordHandler(config, db, logger))))
 
 	// Health check endpoint (no middleware needed)
 	http.HandleFunc("/health", makeHealthHandler(db, logger))
