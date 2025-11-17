@@ -6,6 +6,7 @@
 *.dylib
 auth-service
 tvbingefriend-user-service
+user-service
 
 # Test binary, built with `go test -c`
 *.test

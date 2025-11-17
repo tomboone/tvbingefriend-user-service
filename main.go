@@ -9,7 +9,30 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	httpSwagger "github.com/swaggo/http-swagger"
+	_ "tvbingefriend-user-service/docs" // Import generated docs
 )
+
+// @title TV Binge Friend User Service API
+// @version 1.0
+// @description Authentication and user management API for TV Binge Friend application
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.email support@tvbingefriend.com
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @host localhost:8080
+// @BasePath /
+// @schemes http https
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
 
 func main() {
 	// Load configuration
@@ -78,6 +101,9 @@ func main() {
 
 	// Health check endpoint (no middleware needed)
 	http.HandleFunc("/health", makeHealthHandler(db, logger))
+
+	// Swagger documentation endpoint
+	http.HandleFunc("/swagger/", httpSwagger.WrapHandler)
 
 	// Create HTTP server
 	srv := &http.Server{

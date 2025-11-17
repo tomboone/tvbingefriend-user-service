@@ -1,0 +1,635 @@
+basePath: /
+definitions:
+  main.ChangePasswordRequest:
+    properties:
+      current_password:
+        example: OldPass123!
+        type: string
+      new_password:
+        example: NewSecurePass123!
+        type: string
+    type: object
+  main.DeleteAccountRequest:
+    properties:
+      password:
+        example: SecurePass123!
+        type: string
+    type: object
+  main.ErrorResponse:
+    properties:
+      error:
+        example: Invalid request
+        type: string
+    type: object
+  main.LoginRequest:
+    properties:
+      password:
+        example: SecurePass123!
+        type: string
+      username:
+        example: john_doe
+        type: string
+    type: object
+  main.PasswordResetRequest:
+    properties:
+      email:
+        example: john@example.com
+        type: string
+    type: object
+  main.ProfileResponse:
+    properties:
+      created_at:
+        example: "2024-01-01T00:00:00Z"
+        type: string
+      email:
+        example: john@example.com
+        type: string
+      email_verified:
+        example: true
+        type: boolean
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      username:
+        example: john_doe
+        type: string
+    type: object
+  main.RefreshRequest:
+    properties:
+      refresh_token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    type: object
+  main.RegisterRequest:
+    properties:
+      email:
+        example: john@example.com
+        type: string
+      password:
+        example: SecurePass123!
+        type: string
+      username:
+        example: john_doe
+        type: string
+    type: object
+  main.ResendVerificationRequest:
+    properties:
+      email:
+        example: john@example.com
+        type: string
+    type: object
+  main.ResetPasswordRequest:
+    properties:
+      new_password:
+        example: NewSecurePass123!
+        type: string
+      token:
+        example: abc123token
+        type: string
+    type: object
+  main.TokenResponse:
+    properties:
+      access_token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      refresh_token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    type: object
+  main.UpdateEmailRequest:
+    properties:
+      new_email:
+        example: newemail@example.com
+        type: string
+      password:
+        example: SecurePass123!
+        type: string
+    type: object
+  main.UpdateUsernameRequest:
+    properties:
+      new_username:
+        example: jane_doe
+        type: string
+      password:
+        example: SecurePass123!
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@tvbingefriend.com
+    name: API Support
+  description: Authentication and user management API for TV Binge Friend application
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: TV Binge Friend User Service API
+  version: "1.0"
+paths:
+  /delete-account:
+    delete:
+      consumes:
+      - application/json
+      description: Permanently deletes a user's account
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Current password for confirmation
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/main.DeleteAccountRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            type: string
+        "401":
+          description: Invalid token or password
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete account
+      tags:
+      - Account Management
+  /health:
+    get:
+      description: Returns the health status of the service and database
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: status and database connection status
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health check
+      tags:
+      - System
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a user and returns JWT tokens
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/main.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.TokenResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "401":
+          description: Invalid credentials
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "403":
+          description: Email not verified
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Login user
+      tags:
+      - Authentication
+  /profile:
+    get:
+      description: Returns the authenticated user's profile information
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.ProfileResponse'
+        "401":
+          description: Invalid or missing token
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get user profile
+      tags:
+      - Profile Management
+  /profile/email:
+    put:
+      consumes:
+      - application/json
+      description: Updates the authenticated user's email address (requires re-verification)
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: New email and password
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/main.UpdateEmailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request or validation failed
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "401":
+          description: Invalid token or password
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "409":
+          description: Email already taken
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update email
+      tags:
+      - Profile Management
+  /profile/password:
+    put:
+      consumes:
+      - application/json
+      description: Changes the authenticated user's password
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Current and new passwords
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/main.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request or validation failed
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "401":
+          description: Invalid token or current password
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Change password
+      tags:
+      - Profile Management
+  /profile/username:
+    put:
+      consumes:
+      - application/json
+      description: Updates the authenticated user's username
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: New username and password
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/main.UpdateUsernameRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request or validation failed
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "401":
+          description: Invalid token or password
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "409":
+          description: Username already taken
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update username
+      tags:
+      - Profile Management
+  /refresh:
+    post:
+      consumes:
+      - application/json
+      description: Exchanges a refresh token for new access and refresh tokens
+      parameters:
+      - description: Refresh token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/main.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: access_token and refresh_token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "401":
+          description: Invalid or revoked refresh token
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Refresh access token
+      tags:
+      - Authentication
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user account with email verification
+      parameters:
+      - description: Registration details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/main.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/main.TokenResponse'
+        "400":
+          description: Invalid request or validation failed
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "409":
+          description: Username or email already exists
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - Authentication
+  /request-password-reset:
+    post:
+      consumes:
+      - application/json
+      description: Sends a password reset link to the user's email address
+      parameters:
+      - description: Email address
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/main.PasswordResetRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid email format
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "429":
+          description: Too many requests
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Request password reset
+      tags:
+      - Password Reset
+  /resend-verification:
+    post:
+      consumes:
+      - application/json
+      description: Resends the email verification link to the user's email address
+      parameters:
+      - description: Email address
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/main.ResendVerificationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid email format
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Resend verification email
+      tags:
+      - Email Verification
+  /reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Resets the user's password using a reset token
+      parameters:
+      - description: Reset token and new password
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/main.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid token or password validation failed
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Reset password
+      tags:
+      - Password Reset
+  /verify:
+    get:
+      consumes:
+      - application/json
+      description: Validates an access token and returns user information
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: user_id and username
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Missing or invalid token
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Verify JWT token
+      tags:
+      - Authentication
+  /verify-email:
+    get:
+      description: Verifies a user's email address using the verification token
+      parameters:
+      - description: Email verification token
+        in: query
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Verification success message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid or expired token
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Verify email address
+      tags:
+      - Email Verification
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

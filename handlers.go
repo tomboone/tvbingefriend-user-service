@@ -10,26 +10,41 @@ import (
 	"time"
 )
 
+// RegisterRequest represents the request body for user registration
 type RegisterRequest struct {
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Username string `json:"username" example:"john_doe"`
+	Email    string `json:"email" example:"john@example.com"`
+	Password string `json:"password" example:"SecurePass123!"`
 }
 
+// LoginRequest represents the request body for user login
 type LoginRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Username string `json:"username" example:"john_doe"`
+	Password string `json:"password" example:"SecurePass123!"`
 }
 
+// TokenResponse represents the response containing JWT tokens
 type TokenResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	AccessToken  string `json:"access_token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
+	RefreshToken string `json:"refresh_token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
 }
 
+// ErrorResponse represents an error response
 type ErrorResponse struct {
-	Error string `json:"error"`
+	Error string `json:"error" example:"Invalid request"`
 }
 
+// @Summary Register a new user
+// @Description Creates a new user account with email verification
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body RegisterRequest true "Registration details"
+// @Success 201 {object} TokenResponse
+// @Failure 400 {object} ErrorResponse "Invalid request or validation failed"
+// @Failure 409 {object} ErrorResponse "Username or email already exists"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /register [post]
 func makeRegisterHandler(config *Config, db *sql.DB, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// All the handleRegister code goes here
@@ -161,6 +176,18 @@ func makeRegisterHandler(config *Config, db *sql.DB, logger *slog.Logger) http.H
 	}
 }
 
+// @Summary Login user
+// @Description Authenticates a user and returns JWT tokens
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body LoginRequest true "Login credentials"
+// @Success 200 {object} TokenResponse
+// @Failure 400 {object} ErrorResponse "Invalid request"
+// @Failure 401 {object} ErrorResponse "Invalid credentials"
+// @Failure 403 {object} ErrorResponse "Email not verified"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /login [post]
 func makeLoginHandler(config *Config, db *sql.DB, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -259,6 +286,16 @@ func makeLoginHandler(config *Config, db *sql.DB, logger *slog.Logger) http.Hand
 	}
 }
 
+// @Summary Verify JWT token
+// @Description Validates an access token and returns user information
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param Authorization header string true "Bearer token"
+// @Success 200 {object} map[string]string "user_id and username"
+// @Failure 401 {object} ErrorResponse "Missing or invalid token"
+// @Router /verify [get]
+// @Security BearerAuth
 func makeVerifyHandler(config *Config, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -310,10 +347,22 @@ func makeVerifyHandler(config *Config, logger *slog.Logger) http.HandlerFunc {
 	}
 }
 
+// RefreshRequest represents the request body for token refresh
 type RefreshRequest struct {
-	RefreshToken string `json:"refresh_token"`
+	RefreshToken string `json:"refresh_token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
 }
 
+// @Summary Refresh access token
+// @Description Exchanges a refresh token for new access and refresh tokens
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body RefreshRequest true "Refresh token"
+// @Success 200 {object} map[string]string "access_token and refresh_token"
+// @Failure 400 {object} ErrorResponse "Invalid request"
+// @Failure 401 {object} ErrorResponse "Invalid or revoked refresh token"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /refresh [post]
 func makeRefreshHandler(config *Config, db *sql.DB, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -425,7 +474,13 @@ func makeRefreshHandler(config *Config, db *sql.DB, logger *slog.Logger) http.Ha
 	}
 }
 
-// makeHealthHandler creates a handler for the health check endpoint
+// @Summary Health check
+// @Description Returns the health status of the service and database
+// @Tags System
+// @Produce json
+// @Success 200 {object} map[string]string "status and database connection status"
+// @Failure 503 {object} map[string]string "Service unavailable"
+// @Router /health [get]
 func makeHealthHandler(db *sql.DB, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Check database connectivity
@@ -447,7 +502,15 @@ func makeHealthHandler(db *sql.DB, logger *slog.Logger) http.HandlerFunc {
 	}
 }
 
-// makeVerifyEmailHandler creates a handler for email verification
+// @Summary Verify email address
+// @Description Verifies a user's email address using the verification token
+// @Tags Email Verification
+// @Produce json
+// @Param token query string true "Email verification token"
+// @Success 200 {object} map[string]string "Verification success message"
+// @Failure 400 {object} ErrorResponse "Invalid or expired token"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /verify-email [get]
 func makeVerifyEmailHandler(db *sql.DB, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -511,10 +574,19 @@ func makeVerifyEmailHandler(db *sql.DB, logger *slog.Logger) http.HandlerFunc {
 
 // ResendVerificationRequest represents the request body for resending verification email
 type ResendVerificationRequest struct {
-	Email string `json:"email"`
+	Email string `json:"email" example:"john@example.com"`
 }
 
-// makeResendVerificationHandler creates a handler for resending verification emails
+// @Summary Resend verification email
+// @Description Resends the email verification link to the user's email address
+// @Tags Email Verification
+// @Accept json
+// @Produce json
+// @Param request body ResendVerificationRequest true "Email address"
+// @Success 200 {object} map[string]string "Success message"
+// @Failure 400 {object} ErrorResponse "Invalid email format"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /resend-verification [post]
 func makeResendVerificationHandler(config *Config, db *sql.DB, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -612,7 +684,22 @@ func makeResendVerificationHandler(config *Config, db *sql.DB, logger *slog.Logg
 	}
 }
 
-// makeRequestPasswordResetHandler handles password reset requests
+// PasswordResetRequest represents the request body for requesting password reset
+type PasswordResetRequest struct {
+	Email string `json:"email" example:"john@example.com"`
+}
+
+// @Summary Request password reset
+// @Description Sends a password reset link to the user's email address
+// @Tags Password Reset
+// @Accept json
+// @Produce json
+// @Param request body PasswordResetRequest true "Email address"
+// @Success 200 {object} map[string]string "Success message"
+// @Failure 400 {object} ErrorResponse "Invalid email format"
+// @Failure 429 {string} string "Too many requests"
+// @Failure 500 {string} string "Internal server error"
+// @Router /request-password-reset [post]
 func makeRequestPasswordResetHandler(config *Config, db *sql.DB, logger *slog.Logger, rateLimiter *RateLimiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Parse request body
@@ -672,7 +759,22 @@ func makeRequestPasswordResetHandler(config *Config, db *sql.DB, logger *slog.Lo
 	}
 }
 
-// makeResetPasswordHandler handles the actual password reset with token
+// ResetPasswordRequest represents the request body for resetting password
+type ResetPasswordRequest struct {
+	Token       string `json:"token" example:"abc123token"`
+	NewPassword string `json:"new_password" example:"NewSecurePass123!"`
+}
+
+// @Summary Reset password
+// @Description Resets the user's password using a reset token
+// @Tags Password Reset
+// @Accept json
+// @Produce json
+// @Param request body ResetPasswordRequest true "Reset token and new password"
+// @Success 200 {object} map[string]string "Success message"
+// @Failure 400 {object} ErrorResponse "Invalid token or password validation failed"
+// @Failure 500 {string} string "Internal server error"
+// @Router /reset-password [post]
 func makeResetPasswordHandler(config *Config, db *sql.DB, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Parse request body
@@ -723,7 +825,24 @@ func makeResetPasswordHandler(config *Config, db *sql.DB, logger *slog.Logger) h
 	}
 }
 
-// makeDeleteAccountHandler handles account deletion requests
+// DeleteAccountRequest represents the request body for account deletion
+type DeleteAccountRequest struct {
+	Password string `json:"password" example:"SecurePass123!"`
+}
+
+// @Summary Delete account
+// @Description Permanently deletes a user's account
+// @Tags Account Management
+// @Accept json
+// @Produce json
+// @Param Authorization header string true "Bearer token"
+// @Param request body DeleteAccountRequest true "Current password for confirmation"
+// @Success 200 {object} map[string]string "Success message"
+// @Failure 400 {string} string "Invalid request"
+// @Failure 401 {object} ErrorResponse "Invalid token or password"
+// @Failure 500 {string} string "Internal server error"
+// @Router /delete-account [delete]
+// @Security BearerAuth
 func makeDeleteAccountHandler(config *Config, db *sql.DB, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Extract JWT token from Authorization header
@@ -787,7 +906,25 @@ func makeDeleteAccountHandler(config *Config, db *sql.DB, logger *slog.Logger) h
 	}
 }
 
-// makeGetProfileHandler returns a user's profile information
+// ProfileResponse represents the user profile data
+type ProfileResponse struct {
+	ID            string `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Username      string `json:"username" example:"john_doe"`
+	Email         string `json:"email" example:"john@example.com"`
+	EmailVerified bool   `json:"email_verified" example:"true"`
+	CreatedAt     string `json:"created_at" example:"2024-01-01T00:00:00Z"`
+}
+
+// @Summary Get user profile
+// @Description Returns the authenticated user's profile information
+// @Tags Profile Management
+// @Produce json
+// @Param Authorization header string true "Bearer token"
+// @Success 200 {object} ProfileResponse
+// @Failure 401 {object} ErrorResponse "Invalid or missing token"
+// @Failure 500 {string} string "Internal server error"
+// @Router /profile [get]
+// @Security BearerAuth
 func makeGetProfileHandler(config *Config, db *sql.DB, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Extract JWT token from Authorization header
@@ -831,7 +968,26 @@ func makeGetProfileHandler(config *Config, db *sql.DB, logger *slog.Logger) http
 	}
 }
 
-// makeUpdateUsernameHandler updates a user's username
+// UpdateUsernameRequest represents the request body for updating username
+type UpdateUsernameRequest struct {
+	NewUsername string `json:"new_username" example:"jane_doe"`
+	Password    string `json:"password" example:"SecurePass123!"`
+}
+
+// @Summary Update username
+// @Description Updates the authenticated user's username
+// @Tags Profile Management
+// @Accept json
+// @Produce json
+// @Param Authorization header string true "Bearer token"
+// @Param request body UpdateUsernameRequest true "New username and password"
+// @Success 200 {object} map[string]string "Success message"
+// @Failure 400 {object} ErrorResponse "Invalid request or validation failed"
+// @Failure 401 {object} ErrorResponse "Invalid token or password"
+// @Failure 409 {string} string "Username already taken"
+// @Failure 500 {string} string "Internal server error"
+// @Router /profile/username [put]
+// @Security BearerAuth
 func makeUpdateUsernameHandler(config *Config, db *sql.DB, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Extract JWT token
@@ -902,7 +1058,26 @@ func makeUpdateUsernameHandler(config *Config, db *sql.DB, logger *slog.Logger) 
 	}
 }
 
-// makeUpdateEmailHandler updates a user's email and triggers reverification
+// UpdateEmailRequest represents the request body for updating email
+type UpdateEmailRequest struct {
+	NewEmail string `json:"new_email" example:"newemail@example.com"`
+	Password string `json:"password" example:"SecurePass123!"`
+}
+
+// @Summary Update email
+// @Description Updates the authenticated user's email address (requires re-verification)
+// @Tags Profile Management
+// @Accept json
+// @Produce json
+// @Param Authorization header string true "Bearer token"
+// @Param request body UpdateEmailRequest true "New email and password"
+// @Success 200 {object} map[string]string "Success message"
+// @Failure 400 {object} ErrorResponse "Invalid request or validation failed"
+// @Failure 401 {object} ErrorResponse "Invalid token or password"
+// @Failure 409 {string} string "Email already taken"
+// @Failure 500 {string} string "Internal server error"
+// @Router /profile/email [put]
+// @Security BearerAuth
 func makeUpdateEmailHandler(config *Config, db *sql.DB, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Extract JWT token
@@ -990,7 +1165,25 @@ func makeUpdateEmailHandler(config *Config, db *sql.DB, logger *slog.Logger) htt
 	}
 }
 
-// makeChangePasswordHandler changes a user's password
+// ChangePasswordRequest represents the request body for changing password
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password" example:"OldPass123!"`
+	NewPassword     string `json:"new_password" example:"NewSecurePass123!"`
+}
+
+// @Summary Change password
+// @Description Changes the authenticated user's password
+// @Tags Profile Management
+// @Accept json
+// @Produce json
+// @Param Authorization header string true "Bearer token"
+// @Param request body ChangePasswordRequest true "Current and new passwords"
+// @Success 200 {object} map[string]string "Success message"
+// @Failure 400 {object} ErrorResponse "Invalid request or validation failed"
+// @Failure 401 {object} ErrorResponse "Invalid token or current password"
+// @Failure 500 {string} string "Internal server error"
+// @Router /profile/password [put]
+// @Security BearerAuth
 func makeChangePasswordHandler(config *Config, db *sql.DB, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Extract JWT token
