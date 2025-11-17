@@ -1,4 +1,4 @@
-package main
+package service
 
 import (
 	"crypto/rand"
@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/smtp"
+	"tvbingefriend-user-service/internal/config"
 )
 
 // GenerateSecureToken creates a secure random token for email verification
@@ -19,10 +20,10 @@ func GenerateSecureToken() (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
-// sendVerificationEmail sends an email with a verification link
-func sendVerificationEmail(config *Config, logger *slog.Logger, toEmail, username, token string) error {
+// SendVerificationEmail sends an email with a verification link
+func SendVerificationEmail(cfg *config.Config, logger *slog.Logger, toEmail, username, token string) error {
 	// Construct verification URL
-	verifyURL := fmt.Sprintf("%s/verify-email?token=%s", config.AppURL, token)
+	verifyURL := fmt.Sprintf("%s/verify-email?token=%s", cfg.AppURL, token)
 
 	// Email subject and body
 	subject := "Verify Your TVBingeFriend Account"
@@ -42,13 +43,13 @@ Best regards,
 TVBingeFriend Team`, username, verifyURL)
 
 	// Use the generic email sender
-	return sendEmail(config, logger, toEmail, subject, body)
+	return sendEmail(cfg, logger, toEmail, subject, body)
 }
 
-// sendPasswordResetEmail sends a password reset email with the reset token
-func sendPasswordResetEmail(config *Config, logger *slog.Logger, toEmail, token string) error {
+// SendPasswordResetEmail sends a password reset email with the reset token
+func SendPasswordResetEmail(cfg *config.Config, logger *slog.Logger, toEmail, token string) error {
 	// Construct reset link
-	resetLink := fmt.Sprintf("%s/reset-password?token=%s", config.AppURL, token)
+	resetLink := fmt.Sprintf("%s/reset-password?token=%s", cfg.AppURL, token)
 
 	// Email subject and body
 	subject := "Password Reset Request - TVBingeFriend"
@@ -65,25 +66,25 @@ Best regards,
 TVBingeFriend Team`, resetLink)
 
 	// Use the generic email sender
-	return sendEmail(config, logger, toEmail, subject, body)
+	return sendEmail(cfg, logger, toEmail, subject, body)
 }
 
 // sendEmail is a generic helper that sends an email via SMTP
-func sendEmail(config *Config, logger *slog.Logger, toEmail, subject, body string) error {
+func sendEmail(cfg *config.Config, logger *slog.Logger, toEmail, subject, body string) error {
 	// Construct email message
 	message := fmt.Sprintf("From: %s\r\n"+
 		"To: %s\r\n"+
 		"Subject: %s\r\n"+
 		"\r\n"+
 		"%s\r\n",
-		config.EmailFrom, toEmail, subject, body)
+		cfg.EmailFrom, toEmail, subject, body)
 
 	// SMTP authentication
-	auth := smtp.PlainAuth("", config.SMTPUsername, config.SMTPPassword, config.SMTPHost)
+	auth := smtp.PlainAuth("", cfg.SMTPUsername, cfg.SMTPPassword, cfg.SMTPHost)
 
 	// Send email
-	addr := fmt.Sprintf("%s:%d", config.SMTPHost, config.SMTPPort)
-	err := smtp.SendMail(addr, auth, config.EmailFrom, []string{toEmail}, []byte(message))
+	addr := fmt.Sprintf("%s:%d", cfg.SMTPHost, cfg.SMTPPort)
+	err := smtp.SendMail(addr, auth, cfg.EmailFrom, []string{toEmail}, []byte(message))
 	if err != nil {
 		logger.Error("failed to send email", "error", err, "to", toEmail)
 		return err

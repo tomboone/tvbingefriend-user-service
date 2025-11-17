@@ -1,4 +1,4 @@
-package main
+package middleware
 
 import (
 	"log/slog"
@@ -57,8 +57,8 @@ func (rl *RateLimiter) Allow(ip string) bool {
 	return true
 }
 
-// extractIP gets the IP address without the port from RemoteAddr
-func extractIP(remoteAddr string) string {
+// ExtractIP gets the IP address without the port from RemoteAddr
+func ExtractIP(remoteAddr string) string {
 	// RemoteAddr format is "IP:port" or "[IPv6]:port"
 	// Split by last colon to handle both IPv4 and IPv6
 	if idx := strings.LastIndex(remoteAddr, ":"); idx != -1 {
@@ -75,7 +75,7 @@ func RateLimitMiddleware(rl *RateLimiter, logger *slog.Logger) func(http.Handler
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			// Extract IP address from request
-			ip := extractIP(r.RemoteAddr)
+			ip := ExtractIP(r.RemoteAddr)
 
 			// Check if request is allowed
 			if !rl.Allow(ip) {

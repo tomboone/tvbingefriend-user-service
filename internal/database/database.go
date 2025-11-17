@@ -1,21 +1,22 @@
-package main
+package database
 
 import (
 	"database/sql"
 	"fmt"
 	"log"
+	"tvbingefriend-user-service/internal/config"
 
 	_ "github.com/go-sql-driver/mysql"
 )
 
-func connectDB(config *Config) (*sql.DB, error) {
+func Connect(cfg *config.Config) (*sql.DB, error) {
 	// Build connection string from config
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true",
-		config.DBUser,
-		config.DBPassword,
-		config.DBHost,
-		config.DBPort,
-		config.DBName,
+		cfg.DBUser,
+		cfg.DBPassword,
+		cfg.DBHost,
+		cfg.DBPort,
+		cfg.DBName,
 	)
 
 	db, err := sql.Open("mysql", dsn)
@@ -24,19 +25,19 @@ func connectDB(config *Config) (*sql.DB, error) {
 	}
 
 	// Configure connection pool
-	db.SetMaxOpenConns(config.DBMaxOpenConns)
-	db.SetMaxIdleConns(config.DBMaxIdleConns)
-	db.SetConnMaxLifetime(config.DBConnMaxLifetime)
-	db.SetConnMaxIdleTime(config.DBConnMaxIdleTime)
+	db.SetMaxOpenConns(cfg.DBMaxOpenConns)
+	db.SetMaxIdleConns(cfg.DBMaxIdleConns)
+	db.SetConnMaxLifetime(cfg.DBConnMaxLifetime)
+	db.SetConnMaxIdleTime(cfg.DBConnMaxIdleTime)
 
 	// Log pool configuration
 	log.Printf("Database pool configured: MaxOpen=%d, MaxIdle=%d, ConnMaxLifetime=%v, ConnMaxIdleTime=%v",
-		config.DBMaxOpenConns, config.DBMaxIdleConns, config.DBConnMaxLifetime, config.DBConnMaxIdleTime)
+		cfg.DBMaxOpenConns, cfg.DBMaxIdleConns, cfg.DBConnMaxLifetime, cfg.DBConnMaxIdleTime)
 
 	return db, nil
 }
 
-func initDB(db *sql.DB) error {
+func Initialize(db *sql.DB) error {
 	// Create users table
 	usersTable := `
     CREATE TABLE IF NOT EXISTS users (

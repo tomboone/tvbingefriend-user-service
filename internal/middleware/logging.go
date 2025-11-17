@@ -1,4 +1,4 @@
-package main
+package middleware
 
 import (
 	"log/slog"
@@ -18,28 +18,8 @@ func (rw *responseWriter) WriteHeader(code int) {
 	rw.ResponseWriter.WriteHeader(code)
 }
 
-func makeCorsMiddleware(config *Config) func(http.HandlerFunc) http.HandlerFunc {
-	return func(next http.HandlerFunc) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
-			// Set CORS headers
-			w.Header().Set("Access-Control-Allow-Origin", config.AllowedOrigin)
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-			// Handle preflight requests
-			if r.Method == "OPTIONS" {
-				w.WriteHeader(http.StatusOK)
-				return
-			}
-
-			// Call the next handler
-			next(w, r)
-		}
-	}
-}
-
-// loggingMiddleware logs all HTTP requests with method, path, status code, and duration
-func loggingMiddleware(logger *slog.Logger, next http.HandlerFunc) http.HandlerFunc {
+// LoggingMiddleware logs all HTTP requests with method, path, status code, and duration
+func LoggingMiddleware(logger *slog.Logger, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 

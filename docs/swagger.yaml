@@ -1,6 +1,6 @@
 basePath: /
 definitions:
-  main.ChangePasswordRequest:
+  models.ChangePasswordRequest:
     properties:
       current_password:
         example: OldPass123!
@@ -9,19 +9,19 @@ definitions:
         example: NewSecurePass123!
         type: string
     type: object
-  main.DeleteAccountRequest:
+  models.DeleteAccountRequest:
     properties:
       password:
         example: SecurePass123!
         type: string
     type: object
-  main.ErrorResponse:
+  models.ErrorResponse:
     properties:
       error:
         example: Invalid request
         type: string
     type: object
-  main.LoginRequest:
+  models.LoginRequest:
     properties:
       password:
         example: SecurePass123!
@@ -30,13 +30,13 @@ definitions:
         example: john_doe
         type: string
     type: object
-  main.PasswordResetRequest:
+  models.PasswordResetRequest:
     properties:
       email:
         example: john@example.com
         type: string
     type: object
-  main.ProfileResponse:
+  models.ProfileResponse:
     properties:
       created_at:
         example: "2024-01-01T00:00:00Z"
@@ -54,13 +54,13 @@ definitions:
         example: john_doe
         type: string
     type: object
-  main.RefreshRequest:
+  models.RefreshRequest:
     properties:
       refresh_token:
         example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         type: string
     type: object
-  main.RegisterRequest:
+  models.RegisterRequest:
     properties:
       email:
         example: john@example.com
@@ -72,13 +72,13 @@ definitions:
         example: john_doe
         type: string
     type: object
-  main.ResendVerificationRequest:
+  models.ResendVerificationRequest:
     properties:
       email:
         example: john@example.com
         type: string
     type: object
-  main.ResetPasswordRequest:
+  models.ResetPasswordRequest:
     properties:
       new_password:
         example: NewSecurePass123!
@@ -87,7 +87,7 @@ definitions:
         example: abc123token
         type: string
     type: object
-  main.TokenResponse:
+  models.TokenResponse:
     properties:
       access_token:
         example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -96,7 +96,7 @@ definitions:
         example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         type: string
     type: object
-  main.UpdateEmailRequest:
+  models.UpdateEmailRequest:
     properties:
       new_email:
         example: newemail@example.com
@@ -105,7 +105,7 @@ definitions:
         example: SecurePass123!
         type: string
     type: object
-  main.UpdateUsernameRequest:
+  models.UpdateUsernameRequest:
     properties:
       new_username:
         example: jane_doe
@@ -143,7 +143,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/main.DeleteAccountRequest'
+          $ref: '#/definitions/models.DeleteAccountRequest'
       produces:
       - application/json
       responses:
@@ -160,7 +160,7 @@ paths:
         "401":
           description: Invalid token or password
           schema:
-            $ref: '#/definitions/main.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal server error
           schema:
@@ -202,30 +202,30 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/main.LoginRequest'
+          $ref: '#/definitions/models.LoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/main.TokenResponse'
+            $ref: '#/definitions/models.TokenResponse'
         "400":
           description: Invalid request
           schema:
-            $ref: '#/definitions/main.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
         "401":
           description: Invalid credentials
           schema:
-            $ref: '#/definitions/main.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
         "403":
           description: Email not verified
           schema:
-            $ref: '#/definitions/main.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/main.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Login user
       tags:
       - Authentication
@@ -244,11 +244,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/main.ProfileResponse'
+            $ref: '#/definitions/models.ProfileResponse'
         "401":
           description: Invalid or missing token
           schema:
-            $ref: '#/definitions/main.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal server error
           schema:
@@ -274,7 +274,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/main.UpdateEmailRequest'
+          $ref: '#/definitions/models.UpdateEmailRequest'
       produces:
       - application/json
       responses:
@@ -287,11 +287,11 @@ paths:
         "400":
           description: Invalid request or validation failed
           schema:
-            $ref: '#/definitions/main.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
         "401":
           description: Invalid token or password
           schema:
-            $ref: '#/definitions/main.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
         "409":
           description: Email already taken
           schema:
@@ -321,7 +321,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/main.ChangePasswordRequest'
+          $ref: '#/definitions/models.ChangePasswordRequest'
       produces:
       - application/json
       responses:
@@ -334,11 +334,11 @@ paths:
         "400":
           description: Invalid request or validation failed
           schema:
-            $ref: '#/definitions/main.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
         "401":
           description: Invalid token or current password
           schema:
-            $ref: '#/definitions/main.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal server error
           schema:
@@ -364,7 +364,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/main.UpdateUsernameRequest'
+          $ref: '#/definitions/models.UpdateUsernameRequest'
       produces:
       - application/json
       responses:
@@ -377,11 +377,11 @@ paths:
         "400":
           description: Invalid request or validation failed
           schema:
-            $ref: '#/definitions/main.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
         "401":
           description: Invalid token or password
           schema:
-            $ref: '#/definitions/main.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
         "409":
           description: Username already taken
           schema:
@@ -406,7 +406,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/main.RefreshRequest'
+          $ref: '#/definitions/models.RefreshRequest'
       produces:
       - application/json
       responses:
@@ -419,15 +419,15 @@ paths:
         "400":
           description: Invalid request
           schema:
-            $ref: '#/definitions/main.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
         "401":
           description: Invalid or revoked refresh token
           schema:
-            $ref: '#/definitions/main.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/main.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Refresh access token
       tags:
       - Authentication
@@ -442,26 +442,26 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/main.RegisterRequest'
+          $ref: '#/definitions/models.RegisterRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/main.TokenResponse'
+            $ref: '#/definitions/models.TokenResponse'
         "400":
           description: Invalid request or validation failed
           schema:
-            $ref: '#/definitions/main.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
         "409":
           description: Username or email already exists
           schema:
-            $ref: '#/definitions/main.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/main.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Register a new user
       tags:
       - Authentication
@@ -476,7 +476,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/main.PasswordResetRequest'
+          $ref: '#/definitions/models.PasswordResetRequest'
       produces:
       - application/json
       responses:
@@ -489,7 +489,7 @@ paths:
         "400":
           description: Invalid email format
           schema:
-            $ref: '#/definitions/main.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
         "429":
           description: Too many requests
           schema:
@@ -512,7 +512,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/main.ResendVerificationRequest'
+          $ref: '#/definitions/models.ResendVerificationRequest'
       produces:
       - application/json
       responses:
@@ -525,11 +525,11 @@ paths:
         "400":
           description: Invalid email format
           schema:
-            $ref: '#/definitions/main.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/main.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Resend verification email
       tags:
       - Email Verification
@@ -544,7 +544,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/main.ResetPasswordRequest'
+          $ref: '#/definitions/models.ResetPasswordRequest'
       produces:
       - application/json
       responses:
@@ -557,7 +557,7 @@ paths:
         "400":
           description: Invalid token or password validation failed
           schema:
-            $ref: '#/definitions/main.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal server error
           schema:
@@ -588,7 +588,7 @@ paths:
         "401":
           description: Missing or invalid token
           schema:
-            $ref: '#/definitions/main.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Verify JWT token
@@ -615,11 +615,11 @@ paths:
         "400":
           description: Invalid or expired token
           schema:
-            $ref: '#/definitions/main.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/main.ErrorResponse'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Verify email address
       tags:
       - Email Verification

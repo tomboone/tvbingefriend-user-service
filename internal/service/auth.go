@@ -1,16 +1,17 @@
-package main
+package service
 
 import (
 	"database/sql"
 	"errors"
 	"fmt"
 	"time"
+	"tvbingefriend-user-service/internal/models"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func registerUser(db *sql.DB, username, email, password, verifyToken string) (*User, error) {
+func RegisterUser(db *sql.DB, username, email, password, verifyToken string) (*models.User, error) {
 	// Generate a unique ID
 	id := uuid.New().String()
 
@@ -31,7 +32,7 @@ func registerUser(db *sql.DB, username, email, password, verifyToken string) (*U
 	}
 
 	// Return the created user
-	user := &User{
+	user := &models.User{
 		ID:           id,
 		Username:     username,
 		Email:        email,
@@ -41,8 +42,8 @@ func registerUser(db *sql.DB, username, email, password, verifyToken string) (*U
 	return user, nil
 }
 
-func getUserByUsername(db *sql.DB, username string) (*User, error) {
-	var user User
+func GetUserByUsername(db *sql.DB, username string) (*models.User, error) {
+	var user models.User
 
 	query := "SELECT id, username, email, password_hash FROM users WHERE username = ?"
 	err := db.QueryRow(query, username).Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash)
@@ -57,8 +58,8 @@ func getUserByUsername(db *sql.DB, username string) (*User, error) {
 	return &user, nil
 }
 
-func authenticateUser(db *sql.DB, username, password string) (*User, bool, error) {
-	var user User
+func AuthenticateUser(db *sql.DB, username, password string) (*models.User, bool, error) {
+	var user models.User
 	query := `SELECT id, username, email, password_hash, email_verified FROM users WHERE username = ?`
 	err := db.QueryRow(query, username).Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.EmailVerified)
 	if err != nil {
@@ -80,7 +81,7 @@ func authenticateUser(db *sql.DB, username, password string) (*User, bool, error
 
 // GeneratePasswordResetToken generates a secure reset token and stores it with expiry
 func GeneratePasswordResetToken(db *sql.DB, email string) error {
-	// Generate secure random token (reuse the same function from email.go)
+	// Generate secure random token
 	token, err := GenerateSecureToken()
 	if err != nil {
 		return fmt.Errorf("failed to generate reset token: %w", err)
@@ -90,8 +91,8 @@ func GeneratePasswordResetToken(db *sql.DB, email string) error {
 	expiry := time.Now().Add(1 * time.Hour)
 
 	// Update user with reset token and expiry
-	query := `UPDATE users 
-	          SET reset_token = ?, reset_token_expiry = ? 
+	query := `UPDATE users
+	          SET reset_token = ?, reset_token_expiry = ?
 	          WHERE email = ?`
 
 	result, err := db.Exec(query, token, expiry, email)
@@ -117,8 +118,8 @@ func ValidateResetToken(db *sql.DB, token string) (string, error) {
 	var email string
 	var expiry time.Time
 
-	query := `SELECT email, reset_token_expiry 
-	          FROM users 
+	query := `SELECT email, reset_token_expiry
+	          FROM users
 	          WHERE reset_token = ?`
 
 	err := db.QueryRow(query, token).Scan(&email, &expiry)
@@ -146,8 +147,8 @@ func ResetPassword(db *sql.DB, email string, newPassword string) error {
 	}
 
 	// Update password and clear reset token
-	query := `UPDATE users 
-	          SET password_hash = ?, reset_token = NULL, reset_token_expiry = NULL 
+	query := `UPDATE users
+	          SET password_hash = ?, reset_token = NULL, reset_token_expiry = NULL
 	          WHERE email = ?`
 
 	_, err = db.Exec(query, hashedPassword, email)
@@ -198,10 +199,10 @@ func DeleteAccount(db *sql.DB, userID string, password string) error {
 }
 
 // GetUserProfile retrieves a user's profile information by ID
-func GetUserProfile(db *sql.DB, userID string) (*User, error) {
-	var user User
-	query := `SELECT id, username, email, email_verified, created_at 
-	          FROM users 
+func GetUserProfile(db *sql.DB, userID string) (*models.User, error) {
+	var user models.User
+	query := `SELECT id, username, email, email_verified, created_at
+	          FROM users
 	          WHERE id = ?`
 
 	err := db.QueryRow(query, userID).Scan(
@@ -300,8 +301,8 @@ func UpdateEmail(db *sql.DB, userID string, newEmail string, password string) er
 	}
 
 	// Update email and set email_verified to false with new token
-	updateQuery := `UPDATE users 
-	                SET email = ?, email_verified = FALSE, verify_token = ? 
+	updateQuery := `UPDATE users
+	                SET email = ?, email_verified = FALSE, verify_token = ?
 	                WHERE id = ?`
 	_, err = db.Exec(updateQuery, newEmail, verifyToken, userID)
 	if err != nil {

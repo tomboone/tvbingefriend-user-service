@@ -3,15 +3,21 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	stdlog "log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	httpSwagger "github.com/swaggo/http-swagger"
 	_ "tvbingefriend-user-service/docs" // Import generated docs
+	"tvbingefriend-user-service/internal/config"
+	"tvbingefriend-user-service/internal/database"
+	"tvbingefriend-user-service/internal/handlers"
+	"tvbingefriend-user-service/internal/logger"
+	"tvbingefriend-user-service/internal/middleware"
+
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 // @title TV Binge Friend User Service API
@@ -36,78 +42,78 @@ import (
 
 func main() {
 	// Load configuration
-	config, err := LoadConfig()
+	cfg, err := config.Load()
 	if err != nil {
-		log.Fatal("Failed to load configuration:", err)
+		stdlog.Fatal("Failed to load configuration:", err)
 	}
 
 	fmt.Println("Configuration loaded successfully!")
-	fmt.Printf("Server will run on port: %s\n", config.ServerPort)
+	fmt.Printf("Server will run on port: %s\n", cfg.ServerPort)
 
 	// Initialize structured logger
-	logger := setupLogger(config)
+	log := logger.Setup(cfg)
 
 	// Connect to database
-	db, err := connectDB(config)
+	db, err := database.Connect(cfg)
 	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
+		stdlog.Fatal("Failed to connect to database:", err)
 	}
 	defer db.Close()
 
-	logger.Info("starting user service",
-		"port", config.ServerPort,
-		"environment", config.Environment,
-		"cors_origin", config.AllowedOrigin,
+	log.Info("starting user service",
+		"port", cfg.ServerPort,
+		"environment", cfg.Environment,
+		"cors_origin", cfg.AllowedOrigin,
 	)
 
 	// Initialize database tables
-	err = initDB(db)
+	err = database.Initialize(db)
 	if err != nil {
-		log.Fatal("Failed to initialize database:", err)
+		stdlog.Fatal("Failed to initialize database:", err)
 	}
 
 	fmt.Println("Database connected and initialized successfully!")
 
 	// Create rate limiters
-	loginRateLimiter := NewRateLimiter(5, time.Minute)         // 5 attempts per minute
-	registerRateLimiter := NewRateLimiter(3, time.Minute)      // 3 attempts per minute
-	passwordResetRateLimiter := NewRateLimiter(3, time.Minute) // 3 attempts per minute
+	loginRateLimiter := middleware.NewRateLimiter(5, time.Minute)         // 5 attempts per minute
+	registerRateLimiter := middleware.NewRateLimiter(3, time.Minute)      // 3 attempts per minute
+	passwordResetRateLimiter := middleware.NewRateLimiter(3, time.Minute) // 3 attempts per minute
 
 	// Create CORS middleware with config
-	corsMiddleware := makeCorsMiddleware(config)
+	corsMiddleware := middleware.MakeCorsMiddleware(cfg)
 
 	// Set up HTTP routes with CORS and rate limiting on auth endpoints
-	http.HandleFunc("/register", loggingMiddleware(logger, corsMiddleware(RateLimitMiddleware(registerRateLimiter, logger)(makeRegisterHandler(config, db, logger)))))
-	http.HandleFunc("/login", loggingMiddleware(logger, corsMiddleware(RateLimitMiddleware(loginRateLimiter, logger)(makeLoginHandler(config, db, logger)))))
-	http.HandleFunc("/verify", loggingMiddleware(logger, corsMiddleware(makeVerifyHandler(config, logger))))
-	http.HandleFunc("/refresh", loggingMiddleware(logger, corsMiddleware(makeRefreshHandler(config, db, logger))))
+	http.HandleFunc("/register", middleware.LoggingMiddleware(log, corsMiddleware(middleware.RateLimitMiddleware(registerRateLimiter, log)(handlers.MakeRegisterHandler(cfg, db, log)))))
+	http.HandleFunc("/login", middleware.LoggingMiddleware(log, corsMiddleware(middleware.RateLimitMiddleware(loginRateLimiter, log)(handlers.MakeLoginHandler(cfg, db, log)))))
+	http.HandleFunc("/verify", middleware.LoggingMiddleware(log, corsMiddleware(handlers.MakeVerifyHandler(cfg, log))))
+	http.HandleFunc("/refresh", middleware.LoggingMiddleware(log, corsMiddleware(handlers.MakeRefreshHandler(cfg, db, log))))
 
 	// Email verification endpoints
-	http.HandleFunc("/verify-email", loggingMiddleware(logger, makeVerifyEmailHandler(db, logger)))
-	http.HandleFunc("/resend-verification", loggingMiddleware(logger, corsMiddleware(makeResendVerificationHandler(config, db, logger))))
+	http.HandleFunc("/verify-email", middleware.LoggingMiddleware(log, handlers.MakeVerifyEmailHandler(db, log)))
+	http.HandleFunc("/resend-verification", middleware.LoggingMiddleware(log, corsMiddleware(handlers.MakeResendVerificationHandler(cfg, db, log))))
 
 	// Password reset endpoints
-	http.HandleFunc("/request-password-reset", loggingMiddleware(logger, corsMiddleware(RateLimitMiddleware(passwordResetRateLimiter, logger)(makeRequestPasswordResetHandler(config, db, logger, passwordResetRateLimiter)))))
-	http.HandleFunc("/reset-password", loggingMiddleware(logger, corsMiddleware(makeResetPasswordHandler(config, db, logger))))
+	http.HandleFunc("/request-password-reset", middleware.LoggingMiddleware(log, corsMiddleware(middleware.RateLimitMiddleware(passwordResetRateLimiter, log)(handlers.MakeRequestPasswordResetHandler(cfg, db, log, passwordResetRateLimiter)))))
+	http.HandleFunc("/reset-password", middleware.LoggingMiddleware(log, corsMiddleware(handlers.MakeResetPasswordHandler(cfg, db, log))))
 
 	// Account management endpoints
-	http.HandleFunc("/delete-account", loggingMiddleware(logger, corsMiddleware(makeDeleteAccountHandler(config, db, logger))))
+	http.HandleFunc("/delete-account", middleware.LoggingMiddleware(log, corsMiddleware(handlers.MakeDeleteAccountHandler(cfg, db, log))))
 
 	// Profile management endpoints
-	http.HandleFunc("/profile", loggingMiddleware(logger, corsMiddleware(makeGetProfileHandler(config, db, logger))))
-	http.HandleFunc("/profile/username", loggingMiddleware(logger, corsMiddleware(makeUpdateUsernameHandler(config, db, logger))))
-	http.HandleFunc("/profile/email", loggingMiddleware(logger, corsMiddleware(makeUpdateEmailHandler(config, db, logger))))
-	http.HandleFunc("/profile/password", loggingMiddleware(logger, corsMiddleware(makeChangePasswordHandler(config, db, logger))))
+	http.HandleFunc("/profile", middleware.LoggingMiddleware(log, corsMiddleware(handlers.MakeGetProfileHandler(cfg, db, log))))
+	http.HandleFunc("/profile/username", middleware.LoggingMiddleware(log, corsMiddleware(handlers.MakeUpdateUsernameHandler(cfg, db, log))))
+	http.HandleFunc("/profile/email", middleware.LoggingMiddleware(log, corsMiddleware(handlers.MakeUpdateEmailHandler(cfg, db, log))))
+	http.HandleFunc("/profile/password", middleware.LoggingMiddleware(log, corsMiddleware(handlers.MakeChangePasswordHandler(cfg, db, log))))
 
 	// Health check endpoint (no middleware needed)
-	http.HandleFunc("/health", makeHealthHandler(db, logger))
+	http.HandleFunc("/health", handlers.MakeHealthHandler(db, log))
 
 	// Swagger documentation endpoint
 	http.HandleFunc("/swagger/", httpSwagger.WrapHandler)
 
 	// Create HTTP server
 	srv := &http.Server{
-		Addr: ":" + config.ServerPort,
+		Addr: ":" + cfg.ServerPort,
 	}
 
 	// Channel to listen for shutdown signals
@@ -116,16 +122,16 @@ func main() {
 
 	// Start server in a goroutine
 	go func() {
-		logger.Info("server starting", "port", config.ServerPort)
+		log.Info("server starting", "port", cfg.ServerPort)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Error("server failed to start", "error", err)
+			log.Error("server failed to start", "error", err)
 			os.Exit(1)
 		}
 	}()
 
 	// Wait for shutdown signal
 	<-stop
-	logger.Info("shutdown signal received, starting graceful shutdown")
+	log.Info("shutdown signal received, starting graceful shutdown")
 
 	// Create shutdown context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -133,13 +139,13 @@ func main() {
 
 	// Attempt graceful shutdown
 	if err := srv.Shutdown(ctx); err != nil {
-		logger.Error("server shutdown failed", "error", err)
+		log.Error("server shutdown failed", "error", err)
 	}
 
 	// Close database connection
 	if err := db.Close(); err != nil {
-		logger.Error("failed to close database", "error", err)
+		log.Error("failed to close database", "error", err)
 	}
 
-	logger.Info("server stopped gracefully")
+	log.Info("server stopped gracefully")
 }

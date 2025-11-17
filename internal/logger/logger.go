@@ -1,15 +1,16 @@
-package main
+package logger
 
 import (
 	"log/slog"
 	"os"
+	"tvbingefriend-user-service/internal/config"
 )
 
-// setupLogger creates and configures a structured logger based on the environment
-func setupLogger(config *Config) *slog.Logger {
+// Setup creates and configures a structured logger based on the environment
+func Setup(cfg *config.Config) *slog.Logger {
 	var handler slog.Handler
 
-	if config.Environment == "production" {
+	if cfg.Environment == "production" {
 		// JSON format for production
 		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 			Level: slog.LevelInfo,

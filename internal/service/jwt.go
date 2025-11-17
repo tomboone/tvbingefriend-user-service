@@ -1,9 +1,10 @@
-package main
+package service
 
 import (
 	"database/sql"
 	"fmt"
 	"time"
+	"tvbingefriend-user-service/internal/config"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -16,8 +17,8 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func generateAccessToken(config *Config, userID, username string) (string, error) {
-	expirationTime := time.Now().Add(time.Duration(config.AccessTokenExpiryMins) * time.Minute)
+func GenerateAccessToken(cfg *config.Config, userID, username string) (string, error) {
+	expirationTime := time.Now().Add(time.Duration(cfg.AccessTokenExpiryMins) * time.Minute)
 
 	claims := &Claims{
 		UserID:   userID,
@@ -29,7 +30,7 @@ func generateAccessToken(config *Config, userID, username string) (string, error
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(config.JWTSecret))
+	tokenString, err := token.SignedString([]byte(cfg.JWTSecret))
 	if err != nil {
 		return "", err
 	}
@@ -37,11 +38,11 @@ func generateAccessToken(config *Config, userID, username string) (string, error
 	return tokenString, nil
 }
 
-func validateToken(config *Config, tokenString string) (*Claims, error) {
+func ValidateToken(cfg *config.Config, tokenString string) (*Claims, error) {
 	claims := &Claims{}
 
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(config.JWTSecret), nil
+		return []byte(cfg.JWTSecret), nil
 	})
 
 	if err != nil {
@@ -55,11 +56,11 @@ func validateToken(config *Config, tokenString string) (*Claims, error) {
 	return claims, nil
 }
 
-func generateRefreshToken(config *Config, db *sql.DB, userID, username string) (string, error) {
+func GenerateRefreshToken(cfg *config.Config, db *sql.DB, userID, username string) (string, error) {
 	// Generate unique token ID
 	tokenID := uuid.New().String()
 
-	expirationTime := time.Now().Add(time.Duration(config.RefreshTokenExpiryDays) * 24 * time.Hour)
+	expirationTime := time.Now().Add(time.Duration(cfg.RefreshTokenExpiryDays) * 24 * time.Hour)
 
 	claims := &Claims{
 		UserID:   userID,
@@ -72,13 +73,13 @@ func generateRefreshToken(config *Config, db *sql.DB, userID, username string) (
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(config.JWTSecret))
+	tokenString, err := token.SignedString([]byte(cfg.JWTSecret))
 	if err != nil {
 		return "", err
 	}
 
 	// Store token in database
-	query := `INSERT INTO refresh_tokens (id, user_id, expires_at, revoked) 
+	query := `INSERT INTO refresh_tokens (id, user_id, expires_at, revoked)
               VALUES (?, ?, ?, FALSE)`
 	_, err = db.Exec(query, tokenID, userID, expirationTime)
 	if err != nil {

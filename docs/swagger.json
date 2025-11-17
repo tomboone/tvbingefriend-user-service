@@ -53,7 +53,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/main.DeleteAccountRequest"
+                            "$ref": "#/definitions/models.DeleteAccountRequest"
                         }
                     }
                 ],
@@ -76,7 +76,7 @@
                     "401": {
                         "description": "Invalid token or password",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "500": {
@@ -140,7 +140,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/main.LoginRequest"
+                            "$ref": "#/definitions/models.LoginRequest"
                         }
                     }
                 ],
@@ -148,31 +148,31 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/main.TokenResponse"
+                            "$ref": "#/definitions/models.TokenResponse"
                         }
                     },
                     "400": {
                         "description": "Invalid request",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Invalid credentials",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Email not verified",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     }
                 }
@@ -206,13 +206,13 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/main.ProfileResponse"
+                            "$ref": "#/definitions/models.ProfileResponse"
                         }
                     },
                     "401": {
                         "description": "Invalid or missing token",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "500": {
@@ -256,7 +256,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/main.UpdateEmailRequest"
+                            "$ref": "#/definitions/models.UpdateEmailRequest"
                         }
                     }
                 ],
@@ -273,13 +273,13 @@
                     "400": {
                         "description": "Invalid request or validation failed",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Invalid token or password",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "409": {
@@ -329,7 +329,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/main.ChangePasswordRequest"
+                            "$ref": "#/definitions/models.ChangePasswordRequest"
                         }
                     }
                 ],
@@ -346,13 +346,13 @@
                     "400": {
                         "description": "Invalid request or validation failed",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Invalid token or current password",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "500": {
@@ -396,7 +396,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/main.UpdateUsernameRequest"
+                            "$ref": "#/definitions/models.UpdateUsernameRequest"
                         }
                     }
                 ],
@@ -413,13 +413,13 @@
                     "400": {
                         "description": "Invalid request or validation failed",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Invalid token or password",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "409": {
@@ -457,7 +457,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/main.RefreshRequest"
+                            "$ref": "#/definitions/models.RefreshRequest"
                         }
                     }
                 ],
@@ -474,19 +474,19 @@
                     "400": {
                         "description": "Invalid request",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Invalid or revoked refresh token",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     }
                 }
@@ -512,7 +512,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/main.RegisterRequest"
+                            "$ref": "#/definitions/models.RegisterRequest"
                         }
                     }
                 ],
@@ -520,25 +520,25 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/main.TokenResponse"
+                            "$ref": "#/definitions/models.TokenResponse"
                         }
                     },
                     "400": {
                         "description": "Invalid request or validation failed",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Username or email already exists",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     }
                 }
@@ -564,7 +564,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/main.PasswordResetRequest"
+                            "$ref": "#/definitions/models.PasswordResetRequest"
                         }
                     }
                 ],
@@ -581,7 +581,7 @@
                     "400": {
                         "description": "Invalid email format",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "429": {
@@ -619,7 +619,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/main.ResendVerificationRequest"
+                            "$ref": "#/definitions/models.ResendVerificationRequest"
                         }
                     }
                 ],
@@ -636,13 +636,13 @@
                     "400": {
                         "description": "Invalid email format",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     }
                 }
@@ -668,7 +668,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/main.ResetPasswordRequest"
+                            "$ref": "#/definitions/models.ResetPasswordRequest"
                         }
                     }
                 ],
@@ -685,7 +685,7 @@
                     "400": {
                         "description": "Invalid token or password validation failed",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "500": {
@@ -737,7 +737,7 @@
                     "401": {
                         "description": "Missing or invalid token",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     }
                 }
@@ -775,13 +775,13 @@
                     "400": {
                         "description": "Invalid or expired token",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorResponse"
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     }
                 }
@@ -789,7 +789,7 @@
         }
     },
     "definitions": {
-        "main.ChangePasswordRequest": {
+        "models.ChangePasswordRequest": {
             "type": "object",
             "properties": {
                 "current_password": {
@@ -802,7 +802,7 @@
                 }
             }
         },
-        "main.DeleteAccountRequest": {
+        "models.DeleteAccountRequest": {
             "type": "object",
             "properties": {
                 "password": {
@@ -811,7 +811,7 @@
                 }
             }
         },
-        "main.ErrorResponse": {
+        "models.ErrorResponse": {
             "type": "object",
             "properties": {
                 "error": {
@@ -820,7 +820,7 @@
                 }
             }
         },
-        "main.LoginRequest": {
+        "models.LoginRequest": {
             "type": "object",
             "properties": {
                 "password": {
@@ -833,7 +833,7 @@
                 }
             }
         },
-        "main.PasswordResetRequest": {
+        "models.PasswordResetRequest": {
             "type": "object",
             "properties": {
                 "email": {
@@ -842,7 +842,7 @@
                 }
             }
         },
-        "main.ProfileResponse": {
+        "models.ProfileResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -867,7 +867,7 @@
                 }
             }
         },
-        "main.RefreshRequest": {
+        "models.RefreshRequest": {
             "type": "object",
             "properties": {
                 "refresh_token": {
@@ -876,7 +876,7 @@
                 }
             }
         },
-        "main.RegisterRequest": {
+        "models.RegisterRequest": {
             "type": "object",
             "properties": {
                 "email": {
@@ -893,7 +893,7 @@
                 }
             }
         },
-        "main.ResendVerificationRequest": {
+        "models.ResendVerificationRequest": {
             "type": "object",
             "properties": {
                 "email": {
@@ -902,7 +902,7 @@
                 }
             }
         },
-        "main.ResetPasswordRequest": {
+        "models.ResetPasswordRequest": {
             "type": "object",
             "properties": {
                 "new_password": {
@@ -915,7 +915,7 @@
                 }
             }
         },
-        "main.TokenResponse": {
+        "models.TokenResponse": {
             "type": "object",
             "properties": {
                 "access_token": {
@@ -928,7 +928,7 @@
                 }
             }
         },
-        "main.UpdateEmailRequest": {
+        "models.UpdateEmailRequest": {
             "type": "object",
             "properties": {
                 "new_email": {
@@ -941,7 +941,7 @@
                 }
             }
         },
-        "main.UpdateUsernameRequest": {
+        "models.UpdateUsernameRequest": {
             "type": "object",
             "properties": {
                 "new_username": {

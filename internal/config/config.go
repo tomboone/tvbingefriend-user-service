@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"fmt"
@@ -82,7 +82,7 @@ func getEnvAsDuration(key string, defaultVal time.Duration) time.Duration {
 	return val
 }
 
-func LoadConfig() (*Config, error) {
+func Load() (*Config, error) {
 	config := &Config{
 		Environment: getEnv("ENVIRONMENT", "development"),
 
