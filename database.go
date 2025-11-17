@@ -42,7 +42,10 @@ func initDB(db *sql.DB) error {
 		id VARCHAR(36) PRIMARY KEY,
 		username VARCHAR(255) UNIQUE NOT NULL,
 		email VARCHAR(255) UNIQUE NOT NULL,
-		password_hash VARCHAR(255) NOT NULL
+		password_hash VARCHAR(255) NOT NULL,
+		email_verified BOOLEAN DEFAULT FALSE NOT NULL,
+		verify_token VARCHAR(64) DEFAULT NULL,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	)`
 
 	_, err := db.Exec(query)

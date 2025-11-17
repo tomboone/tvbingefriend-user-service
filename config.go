@@ -33,6 +33,14 @@ type Config struct {
 	DBMaxIdleConns    int
 	DBConnMaxLifetime time.Duration
 	DBConnMaxIdleTime time.Duration
+
+	// Email settings
+	SMTPHost     string
+	SMTPPort     int
+	SMTPUsername string
+	SMTPPassword string
+	EmailFrom    string // e.g., "noreply@tvbingefriend.com"
+	AppURL       string // e.g., "https://tvbingefriend.com" - for verification links
 }
 
 // getEnv reads an environment variable or returns a default value
@@ -101,6 +109,14 @@ func LoadConfig() (*Config, error) {
 		DBMaxIdleConns:    getEnvAsInt("DB_MAX_IDLE_CONNS", 5),
 		DBConnMaxLifetime: getEnvAsDuration("DB_CONN_MAX_LIFETIME", 5*time.Minute),
 		DBConnMaxIdleTime: getEnvAsDuration("DB_CONN_MAX_IDLE_TIME", 10*time.Minute),
+
+		// Email settings
+		SMTPHost:     getEnv("SMTP_HOST", ""),
+		SMTPPort:     getEnvAsInt("SMTP_PORT", 587),
+		SMTPUsername: getEnv("SMTP_USERNAME", ""),
+		SMTPPassword: getEnv("SMTP_PASSWORD", ""),
+		EmailFrom:    getEnv("EMAIL_FROM", ""),
+		AppURL:       getEnv("APP_URL", "http://localhost:3000"),
 	}
 
 	// Validate required fields

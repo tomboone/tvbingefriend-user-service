@@ -8,7 +8,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func registerUser(db *sql.DB, username, email, password string) (*User, error) {
+func registerUser(db *sql.DB, username, email, password, verifyToken string) (*User, error) {
 	// Generate a unique ID
 	id := uuid.New().String()
 
@@ -18,8 +18,12 @@ func registerUser(db *sql.DB, username, email, password string) (*User, error) {
 		return nil, err
 	}
 
-	query := "INSERT INTO users (id, username, email, password_hash) VALUES (?, ?, ?, ?)"
-	_, err = db.Exec(query, id, username, email, string(hashedPassword))
+	query := `
+		INSERT INTO users (id, username, email, password_hash, email_verified, verify_token, created_at)
+		VALUES (?, ?, ?, ?, FALSE, ?, NOW())
+	`
+
+	_, err = db.Exec(query, id, username, email, hashedPassword, verifyToken)
 	if err != nil {
 		return nil, err
 	}
@@ -51,20 +55,23 @@ func getUserByUsername(db *sql.DB, username string) (*User, error) {
 	return &user, nil
 }
 
-func authenticateUser(db *sql.DB, username, password string) (*User, error) {
-	user, err := getUserByUsername(db, username)
+func authenticateUser(db *sql.DB, username, password string) (*User, bool, error) {
+	var user User
+	query := `SELECT id, username, email, password_hash, email_verified FROM users WHERE username = ?`
+	err := db.QueryRow(query, username).Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.EmailVerified)
 	if err != nil {
-		return nil, err
-	}
-	if user == nil {
-		return nil, nil // User not found
+		if err == sql.ErrNoRows {
+			return nil, false, nil // User not found
+		}
+		return nil, false, err // Database error
 	}
 
-	// Compare password with hash
+	// Check password
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 	if err != nil {
-		return nil, nil // Wrong password
+		return nil, false, nil // Invalid password
 	}
 
-	return user, nil
+	// Return user and verification status
+	return &user, user.EmailVerified, nil
 }

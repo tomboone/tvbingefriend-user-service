@@ -58,6 +58,10 @@ func main() {
 	http.HandleFunc("/verify", loggingMiddleware(logger, corsMiddleware(makeVerifyHandler(config, logger))))
 	http.HandleFunc("/refresh", loggingMiddleware(logger, corsMiddleware(makeRefreshHandler(config, logger))))
 
+	// Email verification endpoints
+	http.HandleFunc("/verify-email", loggingMiddleware(logger, makeVerifyEmailHandler(db, logger)))
+	http.HandleFunc("/resend-verification", loggingMiddleware(logger, corsMiddleware(makeResendVerificationHandler(config, db, logger))))
+
 	// Health check endpoint (no middleware needed)
 	http.HandleFunc("/health", makeHealthHandler(db, logger))
 

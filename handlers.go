@@ -71,8 +71,18 @@ func makeRegisterHandler(config *Config, db *sql.DB, logger *slog.Logger) http.H
 			return
 		}
 
-		// Register the user
-		user, err := registerUser(db, req.Username, req.Email, req.Password)
+		// Generate verification token
+		verifyToken, err := generateVerificationToken()
+		if err != nil {
+			logger.Error("failed to generate verification token", "error", err)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to create account"})
+			return
+		}
+
+		// Register the user with verification token
+		user, err := registerUser(db, req.Username, req.Email, req.Password, verifyToken)
 		if err != nil {
 			// Log the actual error with context
 			logger.Error("failed to register user",
@@ -101,6 +111,13 @@ func makeRegisterHandler(config *Config, db *sql.DB, logger *slog.Logger) http.H
 			json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to register user"})
 			return
 		}
+
+		// Send verification email asynchronously (don't block registration)
+		go func() {
+			if err := sendVerificationEmail(config, logger, req.Email, req.Username, verifyToken); err != nil {
+				logger.Error("failed to send verification email", "error", err, "user_id", user.ID)
+			}
+		}()
 
 		// Generate tokens
 		accessToken, err := generateAccessToken(config, user.ID, user.Username)
@@ -174,28 +191,34 @@ func makeLoginHandler(config *Config, db *sql.DB, logger *slog.Logger) http.Hand
 		}
 
 		// Authenticate user
-		user, err := authenticateUser(db, req.Username, req.Password)
+		user, emailVerified, err := authenticateUser(db, req.Username, req.Password)
 		if err != nil {
-			// Log the actual error with context (but be careful not to log passwords!)
-			logger.Warn("authentication failed",
-				"error", err,
-				"username", req.Username,
-			)
-
-			// Always return the same generic message to avoid revealing if username exists
-			// This prevents username enumeration attacks
+			logger.Error("authentication error", "error", err)
 			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusUnauthorized) // 401 instead of 500
-			json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid username or password"})
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(ErrorResponse{Error: "Authentication failed"})
 			return
 		}
+
 		if user == nil {
+			// Invalid credentials - use generic message to prevent user enumeration
+			logger.Warn("failed login attempt", "username", req.Username)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusUnauthorized)
 			json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid username or password"})
 			return
 		}
 
+		// Check if email is verified
+		if !emailVerified {
+			logger.Warn("login attempt with unverified email", "username", req.Username, "user_id", user.ID)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusForbidden) // 403
+			json.NewEncoder(w).Encode(ErrorResponse{Error: "Please verify your email before logging in. Check your inbox for the verification link."})
+			return
+		}
+
+		// Generate tokens
 		accessToken, err := generateAccessToken(config, user.ID, user.Username)
 		if err != nil {
 			logger.Error("failed to generate access token",
@@ -365,5 +388,170 @@ func makeHealthHandler(db *sql.DB, logger *slog.Logger) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"healthy","database":"connected"}`))
+	}
+}
+
+// makeVerifyEmailHandler creates a handler for email verification
+func makeVerifyEmailHandler(db *sql.DB, logger *slog.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		// Get token from query parameter
+		token := r.URL.Query().Get("token")
+		if token == "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(ErrorResponse{Error: "Verification token is required"})
+			return
+		}
+
+		// Verify the token and mark email as verified
+		query := `
+			UPDATE users 
+			SET email_verified = TRUE, verify_token = NULL 
+			WHERE verify_token = ? AND email_verified = FALSE
+		`
+
+		result, err := db.Exec(query, token)
+		if err != nil {
+			logger.Error("failed to verify email", "error", err)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to verify email"})
+			return
+		}
+
+		// Check if any row was updated
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			logger.Error("failed to get rows affected", "error", err)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to verify email"})
+			return
+		}
+
+		if rowsAffected == 0 {
+			// Token not found or already used
+			logger.Warn("invalid or expired verification token", "token", token)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid or expired verification token"})
+			return
+		}
+
+		logger.Info("email verified successfully", "token", token)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "Email verified successfully",
+		})
+	}
+}
+
+// ResendVerificationRequest represents the request body for resending verification email
+type ResendVerificationRequest struct {
+	Email string `json:"email"`
+}
+
+// makeResendVerificationHandler creates a handler for resending verification emails
+func makeResendVerificationHandler(config *Config, db *sql.DB, logger *slog.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var req ResendVerificationRequest
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid request body"})
+			return
+		}
+
+		// Validate email
+		err = validateEmail(req.Email)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(ErrorResponse{Error: err.Error()})
+			return
+		}
+
+		// Check if user exists and is not verified
+		var userID, username string
+		var emailVerified bool
+		query := `SELECT id, username, email_verified FROM users WHERE email = ?`
+		err = db.QueryRow(query, req.Email).Scan(&userID, &username, &emailVerified)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				// Don't reveal if email exists - return success anyway
+				logger.Warn("resend verification attempted for non-existent email", "email", req.Email)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				json.NewEncoder(w).Encode(map[string]string{
+					"message": "If the email exists and is not verified, a verification email has been sent",
+				})
+				return
+			}
+			logger.Error("failed to query user", "error", err, "email", req.Email)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to resend verification email"})
+			return
+		}
+
+		// If already verified, return success (don't reveal this info)
+		if emailVerified {
+			logger.Info("resend verification attempted for already verified email", "email", req.Email)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(map[string]string{
+				"message": "If the email exists and is not verified, a verification email has been sent",
+			})
+			return
+		}
+
+		// Generate new verification token
+		verifyToken, err := generateVerificationToken()
+		if err != nil {
+			logger.Error("failed to generate verification token", "error", err)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to resend verification email"})
+			return
+		}
+
+		// Update user with new token
+		updateQuery := `UPDATE users SET verify_token = ? WHERE id = ?`
+		_, err = db.Exec(updateQuery, verifyToken, userID)
+		if err != nil {
+			logger.Error("failed to update verification token", "error", err, "user_id", userID)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to resend verification email"})
+			return
+		}
+
+		// Send verification email asynchronously
+		go func() {
+			if err := sendVerificationEmail(config, logger, req.Email, username, verifyToken); err != nil {
+				logger.Error("failed to send verification email", "error", err, "user_id", userID)
+			}
+		}()
+
+		logger.Info("verification email resent", "email", req.Email, "user_id", userID)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "If the email exists and is not verified, a verification email has been sent",
+		})
 	}
 }
