@@ -67,6 +67,15 @@ func main() {
 	http.HandleFunc("/request-password-reset", loggingMiddleware(logger, corsMiddleware(RateLimitMiddleware(passwordResetRateLimiter, logger)(makeRequestPasswordResetHandler(config, db, logger, passwordResetRateLimiter)))))
 	http.HandleFunc("/reset-password", loggingMiddleware(logger, corsMiddleware(makeResetPasswordHandler(config, db, logger))))
 
+	// Account management endpoints
+	http.HandleFunc("/delete-account", loggingMiddleware(logger, corsMiddleware(makeDeleteAccountHandler(config, db, logger))))
+
+	// Profile management endpoints
+	http.HandleFunc("/profile", loggingMiddleware(logger, corsMiddleware(makeGetProfileHandler(config, db, logger))))
+	http.HandleFunc("/profile/username", loggingMiddleware(logger, corsMiddleware(makeUpdateUsernameHandler(config, db, logger))))
+	http.HandleFunc("/profile/email", loggingMiddleware(logger, corsMiddleware(makeUpdateEmailHandler(config, db, logger))))
+	http.HandleFunc("/profile/password", loggingMiddleware(logger, corsMiddleware(makeChangePasswordHandler(config, db, logger))))
+
 	// Health check endpoint (no middleware needed)
 	http.HandleFunc("/health", makeHealthHandler(db, logger))
 

@@ -157,3 +157,192 @@ func ResetPassword(db *sql.DB, email string, newPassword string) error {
 
 	return nil
 }
+
+// DeleteAccount deletes a user account after verifying their password
+func DeleteAccount(db *sql.DB, userID string, password string) error {
+	// First, get the user's password hash to verify
+	var passwordHash string
+	query := "SELECT password_hash FROM users WHERE id = ?"
+
+	err := db.QueryRow(query, userID).Scan(&passwordHash)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("user not found")
+		}
+		return fmt.Errorf("database error: %w", err)
+	}
+
+	// Verify the password
+	err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password))
+	if err != nil {
+		return fmt.Errorf("invalid password")
+	}
+
+	// Delete the user
+	deleteQuery := "DELETE FROM users WHERE id = ?"
+	result, err := db.Exec(deleteQuery, userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check deletion: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("user not found")
+	}
+
+	return nil
+}
+
+// GetUserProfile retrieves a user's profile information by ID
+func GetUserProfile(db *sql.DB, userID string) (*User, error) {
+	var user User
+	query := `SELECT id, username, email, email_verified, created_at 
+	          FROM users 
+	          WHERE id = ?`
+
+	err := db.QueryRow(query, userID).Scan(
+		&user.ID,
+		&user.Username,
+		&user.Email,
+		&user.EmailVerified,
+		&user.CreatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("user not found")
+		}
+		return nil, fmt.Errorf("database error: %w", err)
+	}
+
+	return &user, nil
+}
+
+// UpdateUsername changes a user's username after verifying their password
+func UpdateUsername(db *sql.DB, userID string, newUsername string, password string) error {
+	// First, verify the user's password
+	var passwordHash string
+	query := "SELECT password_hash FROM users WHERE id = ?"
+
+	err := db.QueryRow(query, userID).Scan(&passwordHash)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("user not found")
+		}
+		return fmt.Errorf("database error: %w", err)
+	}
+
+	// Verify password
+	err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password))
+	if err != nil {
+		return fmt.Errorf("invalid password")
+	}
+
+	// Check if new username is already taken
+	var existingID string
+	checkQuery := "SELECT id FROM users WHERE username = ? AND id != ?"
+	err = db.QueryRow(checkQuery, newUsername, userID).Scan(&existingID)
+	if err != sql.ErrNoRows {
+		if err == nil {
+			return fmt.Errorf("username already taken")
+		}
+		return fmt.Errorf("database error: %w", err)
+	}
+
+	// Update the username
+	updateQuery := "UPDATE users SET username = ? WHERE id = ?"
+	_, err = db.Exec(updateQuery, newUsername, userID)
+	if err != nil {
+		return fmt.Errorf("failed to update username: %w", err)
+	}
+
+	return nil
+}
+
+// UpdateEmail changes a user's email and triggers new verification
+func UpdateEmail(db *sql.DB, userID string, newEmail string, password string) error {
+	// First, verify the user's password
+	var passwordHash string
+	query := "SELECT password_hash FROM users WHERE id = ?"
+
+	err := db.QueryRow(query, userID).Scan(&passwordHash)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("user not found")
+		}
+		return fmt.Errorf("database error: %w", err)
+	}
+
+	// Verify password
+	err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password))
+	if err != nil {
+		return fmt.Errorf("invalid password")
+	}
+
+	// Check if new email is already taken
+	var existingID string
+	checkQuery := "SELECT id FROM users WHERE email = ? AND id != ?"
+	err = db.QueryRow(checkQuery, newEmail, userID).Scan(&existingID)
+	if err != sql.ErrNoRows {
+		if err == nil {
+			return fmt.Errorf("email already taken")
+		}
+		return fmt.Errorf("database error: %w", err)
+	}
+
+	// Generate new verification token
+	verifyToken, err := GenerateSecureToken()
+	if err != nil {
+		return fmt.Errorf("failed to generate verification token: %w", err)
+	}
+
+	// Update email and set email_verified to false with new token
+	updateQuery := `UPDATE users 
+	                SET email = ?, email_verified = FALSE, verify_token = ? 
+	                WHERE id = ?`
+	_, err = db.Exec(updateQuery, newEmail, verifyToken, userID)
+	if err != nil {
+		return fmt.Errorf("failed to update email: %w", err)
+	}
+
+	return nil
+}
+
+// ChangePassword updates a user's password after verifying their current password
+func ChangePassword(db *sql.DB, userID string, currentPassword string, newPassword string) error {
+	// First, verify the current password
+	var passwordHash string
+	query := "SELECT password_hash FROM users WHERE id = ?"
+
+	err := db.QueryRow(query, userID).Scan(&passwordHash)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("user not found")
+		}
+		return fmt.Errorf("database error: %w", err)
+	}
+
+	// Verify current password
+	err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(currentPassword))
+	if err != nil {
+		return fmt.Errorf("invalid current password")
+	}
+
+	// Hash the new password
+	newPasswordHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	// Update the password
+	updateQuery := "UPDATE users SET password_hash = ? WHERE id = ?"
+	_, err = db.Exec(updateQuery, newPasswordHash, userID)
+	if err != nil {
+		return fmt.Errorf("failed to update password: %w", err)
+	}
+
+	return nil
+}
