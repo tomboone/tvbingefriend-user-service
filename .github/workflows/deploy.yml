@@ -79,7 +79,7 @@ jobs:
       TF_VAR_tf_shared_storage_account_name: ${{ secrets.TF_SHARED_STORAGE_ACCOUNT_NAME }}
       TF_VAR_tf_shared_container_name: ${{ secrets.TF_SHARED_CONTAINER_NAME }}
       TF_VAR_tf_shared_key: ${{ secrets.TF_SHARED_KEY }}
-      TF_VAR_project_name: ${{ env.PROJECT_NAME }}
+      TF_VAR_project_name: ${{ secrets.PROJECT_NAME }}
       TF_VAR_project_short_name: ${{ secrets.PROJECT_SHORT_NAME }}
       TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
       TF_VAR_allowed_origins: ${{ secrets.ALLOWED_ORIGINS }}
