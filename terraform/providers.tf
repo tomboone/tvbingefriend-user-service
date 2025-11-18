@@ -26,7 +26,7 @@ provider "azurerm" {
 }
 
 provider "mysql" {
-  endpoint = data.azurerm_mysql_flexible_server.existing.fqdn
+  endpoint = data.terraform_remote_state.shared.outputs.mysql_server_fqdn
   username = var.mysql_admin_username
   password = var.mysql_admin_password
   tls      = "true"
