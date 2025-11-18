@@ -78,6 +78,9 @@ resource "azurerm_container_app" "user_service" {
   }
 
   template {
+    min_replicas = var.min_replicas
+    max_replicas = var.max_replicas
+
     container {
       name   = var.project_name
       image  = "${data.terraform_remote_state.shared.outputs.acr_login_server}/${var.project_name}:latest"
@@ -92,8 +95,6 @@ resource "azurerm_container_app" "user_service" {
           value = env.value
         }
       }
-      min_replicas = var.min_replicas
-      max_replicas = var.max_replicas
     }
   }
 
