@@ -19,6 +19,49 @@ variable "tf_shared_key" {
   type        = string
 }
 
+# Project Configuration
+variable "project_name" {
+  description = "Project name used for resource naming"
+  type        = string
+}
+
+variable "project_short_name" {
+  description = "Short project name used for resource naming"
+  type        = string
+}
+
+variable "container_port" {
+  description = "Port the container listens on"
+  type        = number
+  default     = 8080
+}
+
+# Container Resources
+variable "cpu" {
+  description = "CPU allocation for the container (in cores)"
+  type        = number
+  default     = 0.25
+}
+
+variable "memory" {
+  description = "Memory allocation for the container"
+  type        = string
+  default     = "0.5Gi"
+}
+
+# Scaling Configuration
+variable "min_replicas" {
+  description = "Minimum number of container replicas"
+  type        = number
+  default     = 1
+}
+
+variable "max_replicas" {
+  description = "Maximum number of container replicas"
+  type        = number
+  default     = 3
+}
+
 # Environment variables
 variable "allowed_origins" {
   description = "Allowed CORS origins for the API"

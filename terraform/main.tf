@@ -1,8 +1,3 @@
-locals {
-  service_name = "tvbf-user-service"
-  short_svc_name = "tvbfusersvc"
-}
-
 # Reference shared infrastructure
 data "terraform_remote_state" "shared" {
   backend = "azurerm"
@@ -14,40 +9,11 @@ data "terraform_remote_state" "shared" {
   }
 }
 
-data "azurerm_resource_group" "existing" {
-  name = data.terraform_remote_state.shared.outputs.resource_group_name
-}
-
-data "azurerm_storage_account" "existing" {
-  name                     = data.terraform_remote_state.shared.outputs.storage_account_name
-  resource_group_name      = data.terraform_remote_state.shared.outputs.resource_group_name
-}
-
-data "azurerm_container_registry" "existing" {
-  name                = data.terraform_remote_state.shared.outputs.acr_name
-  resource_group_name = data.terraform_remote_state.shared.outputs.acr_rg_name
-}
-
-data "azurerm_mysql_flexible_server" "existing" {
-  name                = data.terraform_remote_state.shared.outputs.mysql_server_name
-  resource_group_name = data.terraform_remote_state.shared.outputs.mysql_server_resource_group_name
-}
-
-data "azurerm_log_analytics_workspace" "existing" {
-  name                = data.terraform_remote_state.shared.outputs.log_analytics_workspace_name
-  resource_group_name = data.terraform_remote_state.shared.outputs.log_analytics_workspace_resource_group_name
-}
-
-data "azurerm_container_app_environment" "existing" {
-  name                = data.terraform_remote_state.shared.outputs.container_app_environment_name
-  resource_group_name = data.terraform_remote_state.shared.outputs.container_app_environment_resource_group_name
-}
-
 # Create MySQL database
 resource "azurerm_mysql_flexible_database" "main" {
-  name                = local.short_svc_name
-  resource_group_name = data.azurerm_mysql_flexible_server.existing.resource_group_name
-  server_name         = data.azurerm_mysql_flexible_server.existing.name
+  name                = var.project_short_name
+  resource_group_name = data.terraform_remote_state.shared.outputs.mysql_server_resource_group_name
+  server_name         = data.terraform_remote_state.shared.outputs.mysql_server_name
   charset             = "utf8mb4"
   collation           = "utf8mb4_unicode_ci"
 }
@@ -60,7 +26,7 @@ resource "random_password" "db_password" {
 
 # Create MySQL user for production
 resource "mysql_user" "main" {
-  user               = "${local.short_svc_name}_user"
+  user               = "${var.project_short_name}_user"
   host               = "%"
   plaintext_password = random_password.db_password.result
 }
@@ -73,83 +39,69 @@ resource "mysql_grant" "main" {
   privileges = ["ALL PRIVILEGES"]
 }
 
+locals {
+  app_env_vars = {
+    ENVIRONMENT    = "production"
+    DB_HOST        = data.terraform_remote_state.shared.outputs.mysql_server_fqdn
+    DB_PORT        = "3306"
+    DB_NAME        = azurerm_mysql_flexible_database.main.name
+    DB_USER        = mysql_user.main.user
+    DB_PASSWORD    = random_password.db_password.result
+    JWT_SECRET     = var.jwt_secret
+    ALLOWED_ORIGIN = join(",", var.allowed_origins)
+    SMTP_HOST      = var.smtp_host
+    SMTP_PORT      = "587"
+    SMTP_USERNAME  = var.smtp_username
+    SMTP_PASSWORD  = var.smtp_password
+    EMAIL_FROM     = var.email_from
+    APP_URL        = var.app_url
+  }
+}
+
 # Create container app
 resource "azurerm_container_app" "user_service" {
-  name                         = local.service_name
-  container_app_environment_id = data.azurerm_container_app_environment.existing.id
-  resource_group_name          = data.azurerm_resource_group.existing.name
+  name                         = var.project_name
+  container_app_environment_id = data.terraform_remote_state.shared.outputs.container_app_environment_id
+  resource_group_name          = data.terraform_remote_state.shared.outputs.app_service_plan_resource_group
   revision_mode                = "Single"
+
+  # Registry credentials from shared infrastructure
+  secret {
+    name  = "registry-password"
+    value = data.terraform_remote_state.shared.outputs.acr_admin_password
+  }
+
+  registry {
+    server               = data.terraform_remote_state.shared.outputs.acr_login_server
+    username             = data.terraform_remote_state.shared.outputs.acr_admin_username
+    password_secret_name = "registry-password"
+  }
 
   template {
     container {
-      name   = "user-service"
-      image  = "${data.azurerm_container_registry.existing.login_server}/user-service:latest"
-      cpu    = 0.25
-      memory = "0.5Gi"
+      name   = var.project_name
+      image  = "${data.terraform_remote_state.shared.outputs.acr_login_server}/${var.project_name}:latest"
+      cpu    = var.cpu
+      memory = var.memory
 
-      env {
-        name  = "ENVIRONMENT"
-        value = "production"
+      # Dynamic environment variables from app_env_vars
+      dynamic "env" {
+        for_each = local.app_env_vars
+        content {
+          name  = env.key
+          value = env.value
+        }
       }
-      env {
-        name  = "DB_HOST"
-        value = data.azurerm_mysql_flexible_server.existing.fqdn
-      }
-      env {
-        name = "DB_PORT"
-        value = "3306"
-      }
-      env {
-        name  = "DB_NAME"
-        value = azurerm_mysql_flexible_database.main.name
-      }
-      env {
-        name  = "DB_USER"
-        value = mysql_user.main.user
-      }
-      env {
-        name  = "DB_PASSWORD"
-        value = random_password.db_password.result
-      }
-      env {
-        name  = "JWT_SECRET"
-        value = var.jwt_secret
-      }
-      env {
-        name  = "ALLOWED_ORIGIN"
-        value = var.allowed_origins
-      }
-      env {
-        name  = "SMTP_HOST"
-        value = var.smtp_host
-      }
-      env {
-        name = "SMTP_PORT"
-        value = "587"
-      }
-      env {
-        name  = "SMTP_USERNAME"
-        value = var.smtp_username
-      }
-      env {
-        name  = "SMTP_PASSWORD"
-        value = var.smtp_password
-      }
-      env {
-        name  = "EMAIL_FROM"
-        value = var.email_from
-      }
-      env {
-        name  = "APP_URL"
-        value = var.app_url
-      }
-      # Add other env vars: SMTP_HOST, SMTP_USERNAME, etc.
+      min_replicas = var.min_replicas
+      max_replicas = var.max_replicas
     }
   }
 
   ingress {
     external_enabled = true
-    target_port      = 8080
+    target_port      = var.container_port
+    transport        = "auto"
+
     traffic_weight {
       latest_revision = true
       percentage      = 100
