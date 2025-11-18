@@ -82,3 +82,9 @@ coverage.html
 
 # Claude
 /.claude
+
+# Terraform secrets
+/terraform/backend.hcl
+/terraform/terraform.tfvars
+/terraform/tfplan
+/terraform/.terraform
