@@ -14,7 +14,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 # Copy source code
-COPY *.go ./
+COPY . .
 
 # Build the binary
 # CGO_ENABLED=0 creates a static binary (no C dependencies)
