@@ -62,7 +62,7 @@ locals {
 resource "azurerm_container_app" "user_service" {
   name                         = var.project_name
   container_app_environment_id = data.terraform_remote_state.shared.outputs.container_app_environment_id
-  resource_group_name          = data.terraform_remote_state.shared.outputs.app_service_plan_resource_group
+  resource_group_name          = data.terraform_remote_state.shared.outputs.resource_group_name
   revision_mode                = "Single"
 
   # Registry credentials from shared infrastructure
