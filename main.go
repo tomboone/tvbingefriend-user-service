@@ -31,9 +31,9 @@ import (
 // @license.name MIT
 // @license.url https://opensource.org/licenses/MIT
 
-// @host localhost:8080
+// @host users.tvbingfriend.com
 // @BasePath /
-// @schemes http https
+// @schemes https
 
 // @securityDefinitions.apikey BearerAuth
 // @in header
