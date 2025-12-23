@@ -8,7 +8,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/swaggo/http-swagger v1.3.4
 	github.com/swaggo/swag v1.16.6
-	golang.org/x/crypto v0.45.0
+	golang.org/x/crypto v0.46.0
 )
 
 require (
